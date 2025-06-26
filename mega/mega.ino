@@ -1,3 +1,4 @@
+#include <Wire.h>
 // data_receiver.ino
 // Tugas program ini HANYA menerima data dari Laptop dan berkedip.
 
@@ -6,14 +7,13 @@ int LED_PIN = 53;
 int hasilAngka = 1;
 
 void setup() {
+  Wire.begin();
   // Mulai komunikasi Serial dengan baudrate yang sama seperti di Python
-  Serial.begin(9600);
-  
-  // Set pin LED sebagai output
+  Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
+  while (!Serial); // Tunggu koneksi Seria
   
-  // Beri pesan saat startup
-  Serial.println("Mega siap menerima data dari Laptop...");
+  
 }
 
 void loop() { 
@@ -33,9 +33,9 @@ void loop() {
    if (hasilAngka == 0){
       // Berikan feedback visual: kedipkan LED
       digitalWrite(LED_PIN, HIGH); // Nyalakan LED
-      delay(200);                  // Tunggu sebentar
-      digitalWrite(LED_PIN, LOW);  // Matikan LED
-      delay(200);   
+      // delay(200);                  // Tunggu sebentar
+      // digitalWrite(LED_PIN, LOW);  // Matikan LED
+      // delay(200);   
     }
     else{
       digitalWrite(LED_PIN, LOW); // Nyalakan LED

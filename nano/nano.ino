@@ -8,7 +8,7 @@ MPU6050 mpu6050(Wire);
 
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   // setup_Ultra();
   // set_push();
   Wire.begin();

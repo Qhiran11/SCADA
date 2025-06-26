@@ -8,7 +8,7 @@ import time
 # PASTIKAN port COM ini sudah benar di komputer Anda
 NANO_PORT = 'COM18'
 MEGA_PORT = 'COM3'
-BAUD_RATE = 9600 # Kita mulai dengan baudrate standar yang stabil
+BAUD_RATE = 115200 # Kita mulai dengan baudrate standar yang stabil
 
 # Variabel untuk menampung koneksi serial
 ser_nano = None
