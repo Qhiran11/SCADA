@@ -32,7 +32,7 @@ try:
         if ser_nano.in_waiting > 0:
             # Baca satu baris data (termasuk karakter newline '\n')
             data_from_nano = ser_nano.readline()
-            
+                
             # Tampilkan di konsol laptop untuk debugging
             # .decode('utf-8').strip() mengubah bytes menjadi string yang bersih
             print(f"Meneruskan data: {data_from_nano.decode('utf-8').strip()}")
