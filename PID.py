@@ -8,6 +8,7 @@ from imutils.video import VideoStream
 import serial
 import struct
 import keyboard
+from simple_pid import PID  # <-- Menggunakan library simple-pid
 
 # Argument parser
 ap = argparse.ArgumentParser()
@@ -37,43 +38,33 @@ except Exception as e:
     print(f"Eror: Port Nano {nano_port} tidak terbuka")
     nano = None
 # ============================================================================================
-# PID Controller
-class PID:
-    def __init__(self, Kp, Ki, Kd):
-        self.Kp = Kp
-        self.Ki = Ki    
-        self.Kd = Kd
-        self.prev_error = 0
-        self.integral = 0
-
-    def compute(self, setpoint, current):
-        error = setpoint - current
-        self.integral += error
-        derivative = error - self.prev_error
-        output = (self.Kp * error) + (self.Ki * self.integral) + (self.Kd * derivative)
-        self.prev_error = error
-        return output
-    
-    def reset(self):
-        print(f"reset PID")
-        self.prev_error = 0
-        self.integral = 0
+# PID Controller (Kelas PID kustom sudah dihapus)
 
 # Target agar bola berada di tengah frame (x = 400)
 target_x = 400
-pid_x = PID(Kp=0.3, Ki=0.0, Kd=0.1)
+
+# --- PERUBAHAN UTAMA: Inisialisasi PID menggunakan simple-pid ---
+pid_x = PID(Kp=0.3, Ki=0.0, Kd=0.1, setpoint=target_x)
+# Atur batas output agar sesuai dengan kebutuhan kecepatan motor
+# Misalkan, rentang koreksi yang wajar adalah -85 hingga 85
+pid_x.output_limits = (-85, 85) 
+pid_x.sample_time = 0.01 # Atur waktu sampling untuk konsistensi
+
+
 def PROSES_PID(sumbuX, sumbuY):
     global mega, port_baru
 
-    error_x = target_x - sumbuX
-    koreksi = pid_x.compute(target_x, sumbuX)
+    # --- PERUBAHAN UTAMA: Hitung koreksi menggunakan simple-pid ---
+    # Cukup panggil objek pid dengan nilai saat ini
+    koreksi = pid_x(sumbuX)
 
     # Kecepatan dasar
     base_speed = 85
 
     # Koreksi untuk motor kiri dan kanan
-    roda_kiri = int(base_speed + koreksi)
-    roda_kanan = int(base_speed - koreksi)
+    # Tanda minus pada koreksi mungkin perlu disesuaikan tergantung wiring motor
+    roda_kiri = int(base_speed - koreksi) 
+    roda_kanan = int(base_speed + koreksi)
 
     # Batasi nilai PWM agar tetap dalam 0-255
     roda_kiri = max(0, min(255, roda_kiri))
@@ -112,7 +103,6 @@ def get_zone(x):
         return "right"
     elif 600 <= x <= 800:
         return "far_right"
-
     else:
         return "out"
 
@@ -133,8 +123,6 @@ def PROSES(sumbuX, sumbuY):
         except Exception as e:
             print(f"Error: {e}")
             port_baru = True
-
-
 
 
 # Buat jendela untuk trackbar
@@ -203,14 +191,11 @@ while True:
             cv2.putText(frame, f"({center[0]},{center[1]})", (center[0] + 10, center[1] + 15),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
 
-    
-
 
     try:
         if keyboard.is_pressed('a'):
             a = True
             print("Serial lanjut")
-            # ser.open()
         if keyboard.is_pressed('b'):
             a = False
             b = True
@@ -218,13 +203,12 @@ while True:
             aa = True
             b = True
             nano_bool = True
-            # ser.close()
-        if b == True:
+        if b:
             data = mega.readline().decode().strip()
             if data == "Start":
                 print(data)
                 b = False
-        if nano_bool == True and b == False:
+        if nano_bool and not b:
             data_nano = nano.readline().decode().strip()
             if data_nano == "Ganti":
                 print(data_nano)
@@ -236,18 +220,17 @@ while True:
     
     # Jika serial terbuka, kirim koordinat
     if center is not None:
-        if b == False and nano_bool == True:
+        if not b and nano_bool:
             PROSES_PID(center[0], center[1])
             aa = True
             b = False
-        if nano_bool == False:
+        if not nano_bool:
             PROSES(center[0], center[1])
             aa = True
             b = False
 
-    elif center is None and aa == True:
-        pid_x.reset()  #
-        # Jika tidak ada bola terdeteksi, kirim data 0,
+    elif center is None and aa:
+        pid_x.reset()  # Reset integral PID saat bola hilang
         try:    
             mega.write(struct.pack('>hh', 0, 0))
             print("Data dikirim: 0,0 (Tidak ada bola)")
@@ -255,13 +238,12 @@ while True:
             print("Data dikirim: 0,0 (Tidak ada bola)")
         aa = False
     
-
-    if port_baru is True:
+    if port_baru:
         MEGA_port = input("Masukkan port MEGA baru: ")
         try:
             mega = serial.Serial(MEGA_port, 9600, timeout=1)
             time.sleep(1)
-            print(f"Port {MEGA_port}  terbuka")
+            print(f"Port {MEGA_port} terbuka")
             port_baru = False
         except Exception as e:
             print(f"Error: {e}")
